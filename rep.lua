@@ -1,4 +1,4 @@
-#!/usr/bin/env lua
+#!/usr/bin/env luajit
 
 -- Copyright (c) 2011-2015 Rob Hoelz <rob@hoelz.ro>
 --

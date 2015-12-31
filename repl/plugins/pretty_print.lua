@@ -163,8 +163,9 @@ local function dump(params)
   local path   = params.path
   local v      = params.value
   local indent = params.indent
-
-  local t = type(v)
+  local depth  = params.depth
+  local new_depth
+    local t = type(v)
 
   if t == 'nil' or t == 'boolean' or t == 'number' then
     pieces[#pieces + 1] = colormap[t](tostring(v))
@@ -176,6 +177,7 @@ local function dump(params)
       pieces[#pieces + 1] = colormap.string(format('%q', v))
     end
   elseif t == 'table' then
+
     if seen[v] then
       pieces[#pieces + 1] = colormap.path(seen[v])
       return
@@ -184,6 +186,13 @@ local function dump(params)
     seen[v] = path
 
     local lastintkey = 0
+
+    if depth and depth < 0 then
+        pieces[#pieces + 1] = colormap.path(tostring(v))
+        return
+    elseif depth and type(depth) == 'number' then
+        new_depth = depth - 1
+    end
 
     pieces[#pieces + 1] = colormap.punctuation '{\n'
     for i, v in ipairs(v) do
@@ -196,6 +205,7 @@ local function dump(params)
         path   = path .. '[' .. tostring(i) .. ']',
         value  = v,
         indent = indent + 1,
+        depth  = new_depth,
       }
       pieces[#pieces + 1] = colormap.punctuation ',\n'
       lastintkey = i
@@ -217,6 +227,7 @@ local function dump(params)
             path   = path .. '.' .. tostring(k),
             value  = k,
             indent = indent + 1,
+            depth  = new_depth,
           }
           pieces[#pieces + 1] = colormap.punctuation ']'
         end
@@ -227,6 +238,7 @@ local function dump(params)
           path   = path .. '.' .. tostring(k),
           value  = v,
           indent = indent + 1,
+          depth  = new_depth, 
         }
         pieces[#pieces + 1] = colormap.punctuation ',\n'
       end
@@ -244,9 +256,17 @@ end
 
 repl:requirefeature 'console'
 
+
 function override:displayresults(results)
   local pieces = {}
-
+  local print_recursive = repl._config['pp_recursive']
+  if print_recursive ~= nil then
+      if print_recursive == 0 or not print_recursive or print_recursive == 'false' or print_recursive == 'no' then
+          print_recursive = 0
+      elseif type(print_recursive) == 'number' and print_recursive < 0 then
+          print_recursive = nil
+      end
+  end
   for i = 1, results.n do
     dump {
       pieces = pieces,
@@ -254,6 +274,7 @@ function override:displayresults(results)
       path   = '<topvalue>',
       value  = results[i],
       indent = 1,
+      depth  = print_recursive
     }
     pieces[#pieces + 1] = '\n'
   end
